@@ -509,6 +509,31 @@ void webnet_sessions_set_err_callback(void (*callback)(struct webnet_session *se
 void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset)
 {
     struct webnet_session *session, *next_session;
+    
+     /* Go through list of connected session and process data */
+    for (session = _session_list; session; session = next_session)
+    {
+        /* get next session firstly if this session is closed */
+        next_session = session->next;
+
+        //首先处理所有的文件请求，减小并发压力
+        if (FD_ISSET(session->socket, writeset))
+        {
+            /* handle for write fd set */
+            if (session->session_ops != RT_NULL &&
+                session->session_ops->session_handle != RT_NULL)
+            {
+                session->session_ops->session_handle(session, WEBNET_EVENT_WRITE);
+            }
+
+            /* whether close this session */
+            if (session->session_ops == RT_NULL || session->session_phase == WEB_PHASE_CLOSE)
+            {	
+                /* close this session */
+                webnet_session_close(session);
+            }
+        }
+    }
 
     /* Go through list of connected session and process data */
     for (session = _session_list; session; session = next_session)
@@ -520,6 +545,7 @@ void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset)
         {
             if (session->session_ops == RT_NULL)
             {
+              
                 struct webnet_request *request;
 
                 /* destroy old request */
@@ -573,22 +599,6 @@ void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset)
                         _webnet_session_badrequest(session, session->request->result_code);
                     }
                 }
-                /* close this session */
-                webnet_session_close(session);
-            }
-        }
-        else if (FD_ISSET(session->socket, writeset))
-        {
-            /* handle for write fd set */
-            if (session->session_ops != RT_NULL &&
-                session->session_ops->session_handle != RT_NULL)
-            {
-                session->session_ops->session_handle(session, WEBNET_EVENT_WRITE);
-            }
-
-            /* whether close this session */
-            if (session->session_ops == RT_NULL || session->session_phase == WEB_PHASE_CLOSE)
-            {	
                 /* close this session */
                 webnet_session_close(session);
             }

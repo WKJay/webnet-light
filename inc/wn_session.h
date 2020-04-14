@@ -36,7 +36,7 @@
 extern "C" {
 #endif
 
-#define WEBNET_SESSION_BUFSZ	(4 * 1024)
+#define WEBNET_SESSION_BUFSZ	(1024)
 
 /* close session */
 #define WEBNET_EVENT_CLOSE			(1 << 5)

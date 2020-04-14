@@ -34,6 +34,7 @@
 #include <dfs_posix.h>
 #endif
 
+
 static int _webnet_module_system_init(struct webnet_session *session, int event)
 {
 #ifdef WEBNET_USING_LOG
@@ -117,13 +118,22 @@ static void _webnet_dofile_handle(struct webnet_session *session, int event)
            session->request->pos_start += length;
         }
 #endif            
+//        readbytes = read(fd, session->buffer, length);
+//        if (readbytes <= 0) /* end of file */
+//            goto __exit;
+
+//        if (webnet_session_write(session, session->buffer, readbytes) == 0)
+//            goto __exit;
+//        return;
         readbytes = read(fd, session->buffer, length);
         if (readbytes <= 0) /* end of file */
             goto __exit;
-
-        if (webnet_session_write(session, session->buffer, readbytes) == 0)
-            goto __exit;
-        return;
+        while(readbytes)
+        {
+            if (webnet_session_write(session, session->buffer, readbytes) == 0)
+                goto __exit;
+             readbytes = read(fd, session->buffer, length);  
+        }
     }
 
 __exit:

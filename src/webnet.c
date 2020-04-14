@@ -40,17 +40,18 @@
 
 #define DBG_ENABLE
 #define DBG_COLOR
-#define DBG_SECTION_NAME    "wn"
+#define DBG_SECTION_NAME "wn"
 #ifdef WEBNET_USING_LOG
-#define DBG_LEVEL           DBG_LOG
+#define DBG_LEVEL DBG_LOG
 #else
-#define DBG_LEVEL           DBG_INFO
+#define DBG_LEVEL DBG_INFO
 #endif /* WEBNET_USING_LOG */
 #include <rtdbg.h>
 
 static rt_uint16_t webnet_port = WEBNET_PORT;
 static char webnet_root[64] = WEBNET_ROOT;
 static rt_bool_t init_ok = RT_FALSE;
+rt_sem_t web_session_sem = RT_NULL;
 
 void webnet_set_port(int port)
 {
@@ -63,13 +64,13 @@ int webnet_get_port(void)
     return webnet_port;
 }
 
-void webnet_set_root(const char* webroot_path)
+void webnet_set_root(const char *webroot_path)
 {
     rt_strncpy(webnet_root, webroot_path, sizeof(webnet_root) - 1);
     webnet_root[sizeof(webnet_root) - 1] = '\0';
 }
 
-const char* webnet_get_root(void)
+const char *webnet_get_root(void)
 {
     return webnet_root;
 }
@@ -98,7 +99,7 @@ static void webnet_thread(void *parameter)
     webnet_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
     webnet_saddr.sin_port = htons(webnet_port); /* webnet server port */
 
-    if (bind(listenfd, (struct sockaddr *) &webnet_saddr, sizeof(webnet_saddr)) == -1)
+    if (bind(listenfd, (struct sockaddr *)&webnet_saddr, sizeof(webnet_saddr)) == -1)
     {
         LOG_E("Bind socket failed, errno=%d\n", errno);
         goto __exit;
@@ -142,9 +143,10 @@ static void webnet_thread(void *parameter)
         /* At least one descriptor is ready */
         if (FD_ISSET(listenfd, &tempfds))
         {
-            struct webnet_session* accept_session;
+            struct webnet_session *accept_session;
             /* We have a new connection request */
             accept_session = webnet_session_create(listenfd);
+
             if (accept_session == RT_NULL)
             {
                 /* create session failed, just accept and then close */
