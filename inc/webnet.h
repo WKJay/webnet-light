@@ -88,6 +88,8 @@ extern "C" {
 #define WEBNET_PATH_MAX                256          /* maxiaml path length in webnet */
 #define WEBNET_SERVER                  "Server: webnet "WEBNET_VERSION"\r\n"
 
+#define WEBNET_SELECT_TIMEOUT_MS       2000
+
 /* Pre-declaration */
 struct webnet_session;
 /* webnet query item definitions */

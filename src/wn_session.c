@@ -41,21 +41,21 @@ static void (*webnet_err_callback)(struct webnet_session *session);
  *
  * @return the created web session
  */
-struct webnet_session* webnet_session_create(int listenfd)
+struct webnet_session *webnet_session_create(int listenfd)
 {
-    struct webnet_session* session;
+    struct webnet_session *session;
 
     /* create a new session */
     session = (struct webnet_session *)wn_malloc(sizeof(struct webnet_session));
     if (session != RT_NULL)
     {
         socklen_t clilen;
-		
+
         memset(session, 0x0, sizeof(struct webnet_session));
         session->session_ops = RT_NULL;
 
         clilen = sizeof(struct sockaddr_in);
-        session->socket = accept(listenfd, (struct sockaddr *) &(session->cliaddr), &clilen);
+        session->socket = accept(listenfd, (struct sockaddr *)&(session->cliaddr), &clilen);
         if (session->socket < 0)
         {
             wn_free(session);
@@ -113,7 +113,7 @@ void webnet_session_close(struct webnet_session *session)
 
     /* invoke session close */
     if (session->session_ops != RT_NULL &&
-            session->session_ops->session_close != RT_NULL)
+        session->session_ops->session_close != RT_NULL)
     {
         session->session_ops->session_close(session);
     }
@@ -152,13 +152,13 @@ void webnet_session_close(struct webnet_session *session)
  * @param session, the web session
  * @param fmt, the format string
  */
-void webnet_session_printf(struct webnet_session *session, const char* fmt, ...)
+void webnet_session_printf(struct webnet_session *session, const char *fmt, ...)
 {
     va_list args;
     rt_uint32_t length;
 
     va_start(args, fmt);
-    length = vsnprintf((char*)(session->buffer),
+    length = vsnprintf((char *)(session->buffer),
                        sizeof(session->buffer) - 1,
                        fmt, args);
     session->buffer[length] = '\0';
@@ -177,7 +177,7 @@ RTM_EXPORT(webnet_session_printf);
  *
  * @return the number of bytes actually written to the session
  */
-int webnet_session_write(struct webnet_session *session, const rt_uint8_t* data, rt_size_t size)
+int webnet_session_write(struct webnet_session *session, const rt_uint8_t *data, rt_size_t size)
 {
     /* send data directly */
     send(session->socket, data, size, 0);
@@ -194,7 +194,7 @@ RTM_EXPORT(webnet_session_write);
  *
  * @return
  */
-int webnet_session_redirect(struct webnet_session *session, const char* url)
+int webnet_session_redirect(struct webnet_session *session, const char *url)
 {
     struct webnet_request *request;
 
@@ -222,12 +222,13 @@ RTM_EXPORT(webnet_session_redirect);
  * @return 0 on convert successfull.
  *
  * NOTE: the length of full path is WEBNET_PATH_MAX */
-int webnet_session_get_physical_path(struct webnet_session *session, const char* virtual_path, char* full_path)
+int webnet_session_get_physical_path(struct webnet_session *session, const char *virtual_path, char *full_path)
 {
     int result;
 
     result = 0;
-    if (full_path == RT_NULL) return -1;
+    if (full_path == RT_NULL)
+        return -1;
 
     /* made a full path */
     rt_snprintf(full_path, WEBNET_PATH_MAX, "%s/%s", webnet_get_root(), virtual_path);
@@ -253,8 +254,8 @@ RTM_EXPORT(webnet_session_get_physical_path);
  * @param reason_phrase reason phrase string
  */
 void webnet_session_set_header_status_line(struct webnet_session *session,
-        int code,
-        const char * reason_phrase)
+                                           int code,
+                                           const char *reason_phrase)
 {
     char status_line[16]; /* "HTTP/1.1 ### " */
 
@@ -275,18 +276,18 @@ RTM_EXPORT(webnet_session_set_header_status_line);
  * @param title the code title string
  * @param length the length of http response content
  */
-void webnet_session_set_header(struct webnet_session *session, const char* mimetype, int code, const char* title, int length)
+void webnet_session_set_header(struct webnet_session *session, const char *mimetype, int code, const char *title, int length)
 {
-    static const char* fmt = "HTTP/1.1 %d %s\r\n%s";
-    static const char* content = "Content-Type: %s\r\nContent-Length: %ld\r\nConnection: %s\r\n\r\n";
-    static const char* content_nolength = "Content-Type: %s\r\nConnection: %s\r\n\r\n";
-    static const char* auth = "WWW-Authenticate: Basic realm=%s\r\n";
+    static const char *fmt = "HTTP/1.1 %d %s\r\n%s";
+    static const char *content = "Content-Type: %s\r\nContent-Length: %ld\r\nConnection: %s\r\n\r\n";
+    static const char *content_nolength = "Content-Type: %s\r\nConnection: %s\r\n\r\n";
+    static const char *auth = "WWW-Authenticate: Basic realm=%s\r\n";
 
     char *ptr, *end_buffer;
     int offset;
 
-    ptr = (char*)session->buffer;
-    end_buffer = (char*)session->buffer + session->buffer_length;
+    ptr = (char *)session->buffer;
+    end_buffer = (char *)session->buffer + session->buffer_length;
 
     offset = rt_snprintf(ptr, end_buffer - ptr, fmt, code, title, WEBNET_SERVER);
     ptr += offset;
@@ -299,7 +300,7 @@ void webnet_session_set_header(struct webnet_session *session, const char* mimet
     if (length >= 0)
     {
         offset = rt_snprintf(ptr, end_buffer - ptr, content, mimetype, length,
-                             session->request->connection == WEBNET_CONN_CLOSE? "close" : "Keep-Alive");
+                             session->request->connection == WEBNET_CONN_CLOSE ? "close" : "Keep-Alive");
         ptr += offset;
     }
     else
@@ -308,8 +309,8 @@ void webnet_session_set_header(struct webnet_session *session, const char* mimet
         ptr += offset;
     }
     /* get the total length */
-    length = ptr - (char*)session->buffer;
-	
+    length = ptr - (char *)session->buffer;
+
     /* invoke webnet event */
     if (webnet_module_handle_event(session, WEBNET_EVENT_RSP_HEADER) == WEBNET_MODULE_CONTINUE)
     {
@@ -319,24 +320,25 @@ void webnet_session_set_header(struct webnet_session *session, const char* mimet
 }
 RTM_EXPORT(webnet_session_set_header);
 
-static void _webnet_session_handle_read(struct webnet_session* session)
+static void _webnet_session_handle_read(struct webnet_session *session)
 {
     int read_length;
     rt_uint8_t *buffer_ptr;
 
     buffer_ptr = &session->buffer[session->buffer_offset];
     /* to read data from the socket */
-    read_length = webnet_session_read(session, (char*)buffer_ptr, session->buffer_length - session->buffer_offset);
-	
-    if (read_length > 0) session->buffer_offset += read_length;
+    read_length = webnet_session_read(session, (char *)buffer_ptr, session->buffer_length - session->buffer_offset);
+
+    if (read_length > 0)
+        session->buffer_offset += read_length;
 
     if (session->buffer_offset)
     {
         /* parse web method phase */
         if (session->session_phase == WEB_PHASE_METHOD)
         {
-            int length = webnet_request_parse_method(session->request, (char*)&session->buffer[0],
-                session->buffer_offset);
+            int length = webnet_request_parse_method(session->request, (char *)&session->buffer[0],
+                                                     session->buffer_offset);
 
             if (length)
             {
@@ -346,15 +348,16 @@ static void _webnet_session_handle_read(struct webnet_session* session)
                     /* move to the begining of buffer */
                     memmove(session->buffer, &session->buffer[length], session->buffer_offset);
                 }
-                else session->buffer_offset = 0;
+                else
+                    session->buffer_offset = 0;
             }
         }
 
         /* parse web request header phase */
         if (session->session_phase == WEB_PHASE_HEADER)
         {
-            int length = webnet_request_parse_header(session->request, (char*)&session->buffer[0],
-                session->buffer_offset);
+            int length = webnet_request_parse_header(session->request, (char *)&session->buffer[0],
+                                                     session->buffer_offset);
 
             if (length)
             {
@@ -364,14 +367,15 @@ static void _webnet_session_handle_read(struct webnet_session* session)
                     /* move to the begining of buffer */
                     memmove(session->buffer, &session->buffer[length], session->buffer_offset);
                 }
-                else session->buffer_offset = 0;
+                else
+                    session->buffer_offset = 0;
             }
         }
 
         if (session->session_phase == WEB_PHASE_QUERY)
         {
-            int length = webnet_request_parse_post(session->request, (char*)&session->buffer[0],
-                session->buffer_offset);
+            int length = webnet_request_parse_post(session->request, (char *)&session->buffer[0],
+                                                   session->buffer_offset);
 
             if (length)
             {
@@ -381,17 +385,18 @@ static void _webnet_session_handle_read(struct webnet_session* session)
                     /* move to the begining of buffer */
                     memmove(session->buffer, &session->buffer[length], session->buffer_offset);
                 }
-                else session->buffer_offset = 0;
+                else
+                    session->buffer_offset = 0;
             }
         }
     }
 }
 
-static void _webnet_session_handle_write(struct webnet_session* session)
+static void _webnet_session_handle_write(struct webnet_session *session)
 {
 }
 
-static void _webnet_session_handle(struct webnet_session* session, int event)
+static void _webnet_session_handle(struct webnet_session *session, int event)
 {
     switch (event)
     {
@@ -417,15 +422,14 @@ static void _webnet_session_handle(struct webnet_session* session, int event)
 }
 
 const struct webnet_session_ops _default_session_ops =
-{
-    _webnet_session_handle,
-    RT_NULL
-};
+    {
+        _webnet_session_handle,
+        RT_NULL};
 
 static void _webnet_session_badrequest(struct webnet_session *session, int code)
 {
-    const char* title;
-    static const char* fmt = "<html><head><title>%d %s</title></head><body>%d %s</body></html>\r\n";
+    const char *title;
+    static const char *fmt = "<html><head><title>%d %s</title></head><body>%d %s</body></html>\r\n";
 
     title = "Unknown";
     switch (code)
@@ -501,6 +505,19 @@ void webnet_sessions_set_err_callback(void (*callback)(struct webnet_session *se
 }
 
 /**
+ * close all sessions
+ */
+void webnet_sessions_close_all(void)
+{
+    struct webnet_session *session, *next_session;
+    for (session = _session_list; session; session = next_session)
+    {
+        next_session = session->next;
+        webnet_session_close(session);
+    }
+}
+
+/**
  * handle the file descriptors request
  *
  * @param readset, the file descriptors set for read
@@ -509,8 +526,8 @@ void webnet_sessions_set_err_callback(void (*callback)(struct webnet_session *se
 void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset)
 {
     struct webnet_session *session, *next_session;
-    
-     /* Go through list of connected session and process data */
+
+    /* Go through list of connected session and process data */
     for (session = _session_list; session; session = next_session)
     {
         /* get next session firstly if this session is closed */
@@ -528,7 +545,7 @@ void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset)
 
             /* whether close this session */
             if (session->session_ops == RT_NULL || session->session_phase == WEB_PHASE_CLOSE)
-            {	
+            {
                 /* close this session */
                 webnet_session_close(session);
             }
@@ -545,7 +562,7 @@ void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset)
         {
             if (session->session_ops == RT_NULL)
             {
-              
+
                 struct webnet_request *request;
 
                 /* destroy old request */
@@ -619,7 +636,7 @@ static void list_webnet(void)
     for (session = _session_list; session != RT_NULL; session = session->next)
     {
         strcpy(client_ip_str,
-               inet_ntoa(*((struct in_addr*)&(session->cliaddr.sin_addr))));
+               inet_ntoa(*((struct in_addr *)&(session->cliaddr.sin_addr))));
 
         rt_kprintf("#%u client %s:%u \n",
                    num++,
@@ -640,4 +657,3 @@ FINSH_FUNCTION_EXPORT(list_webnet, list webnet session);
 MSH_CMD_EXPORT(list_webnet, list webnet session);
 #endif
 #endif /* RT_USING_FINSH */
-

@@ -101,6 +101,7 @@ int webnet_sessions_set_fds(fd_set *readset, fd_set *writeset);
 void webnet_sessions_handle_fds(fd_set *readset, fd_set *writeset);
 
 void webnet_sessions_set_err_callback(void (*callback)(struct webnet_session *session));
+void webnet_sessions_close_all(void);
 
 #ifdef  __cplusplus
     }

@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <webnet.h>
 #include <wn_module.h>
@@ -50,12 +51,10 @@
 
 static rt_uint16_t webnet_port = WEBNET_PORT;
 static char webnet_root[64] = WEBNET_ROOT;
-static rt_bool_t init_ok = RT_FALSE;
 rt_sem_t web_session_sem = RT_NULL;
 
 void webnet_set_port(int port)
 {
-    RT_ASSERT(init_ok == RT_FALSE);
     webnet_port = port;
 }
 
@@ -85,6 +84,13 @@ static void webnet_thread(void *parameter)
     fd_set writeset, tempwrtfds;
     int sock_fd, maxfdp1;
     struct sockaddr_in webnet_saddr;
+    int cur_port = webnet_port;
+    struct timeval timeout;
+
+__restart:
+    cur_port = webnet_port;
+    timeout.tv_sec = WEBNET_SELECT_TIMEOUT_MS / 1000;
+    timeout.tv_usec = (WEBNET_SELECT_TIMEOUT_MS % 1000) * 1000;
 
     /* First acquire our socket for listening for connections */
     listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -97,7 +103,7 @@ static void webnet_thread(void *parameter)
     rt_memset(&webnet_saddr, 0, sizeof(webnet_saddr));
     webnet_saddr.sin_family = AF_INET;
     webnet_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    webnet_saddr.sin_port = htons(webnet_port); /* webnet server port */
+    webnet_saddr.sin_port = htons(cur_port); /* webnet server port */
 
     if (bind(listenfd, (struct sockaddr *)&webnet_saddr, sizeof(webnet_saddr)) == -1)
     {
@@ -134,7 +140,19 @@ static void webnet_thread(void *parameter)
         tempfds = readset;
         tempwrtfds = writeset;
         /* Wait for data or a new connection */
-        sock_fd = select(maxfdp1, &tempfds, &tempwrtfds, 0, 0);
+        sock_fd = select(maxfdp1, &tempfds, &tempwrtfds, 0, &timeout);
+
+        //after changing web port
+        if (cur_port != webnet_port)
+        {
+            webnet_sessions_close_all();
+            if (listenfd >= 0)
+            {
+                closesocket(listenfd);
+            }
+            goto __restart;
+        }
+
         if (sock_fd == 0)
         {
             continue;
@@ -182,7 +200,7 @@ int webnet_init(void)
 {
     rt_thread_t tid;
 
-    if (init_ok == RT_TRUE)
+    if (0 == RT_TRUE)
     {
         LOG_I("RT-Thread webnet package is already initialized.");
         return 0;
@@ -195,7 +213,6 @@ int webnet_init(void)
     if (tid != RT_NULL)
     {
         rt_thread_startup(tid);
-        init_ok = RT_TRUE;
         LOG_I("RT-Thread webnet package (V%s) initialize success.", WEBNET_VERSION);
     }
     else
